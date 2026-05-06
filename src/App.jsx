@@ -1,62 +1,75 @@
 import { useState, useEffect } from "react";
 
-/* ════════════════════════════════════════════════
-   CONSTANTS
-════════════════════════════════════════════════ */
-const ADMIN_USER = { username: "kwarsed", password: "5179678nAta", role: "admin" };
+const ADMIN_USER = { username: "kwarsed", password: "5179678nAta", role: "admin", avatar: null };
 const SK = "gdml_v6";
 const SESSION_KEY = "gdml_current_user";
+const APP_VERSION = "v1.2.0";
+
+const UPDATE_HISTORY = [
+  { version: "v1.2.0", date: "06.05.2026", changes: [
+    "➕ Добавлена вкладка 'О проекте'",
+    "➕ Добавлены настройки пользователя (смена ника и аватарки)",
+    "➕ Аватарки пользователей отображаются в круге",
+    "➕ Показ пароля (глазик) при вводе",
+    "➕ Анимация переключения между входом и регистрацией",
+    "➕ Ограничения на длину ника (3-20) и пароля (6-30)",
+    "➕ Проверка уникальности ника при смене",
+    "🔧 Исправлена ошибка входа в аккаунт",
+    "🔧 Аккаунт теперь не слетает при перезагрузке"
+  ]},
+  { version: "v1.0.0", date: "04.05.2026", changes: ["➕ Первый релиз"] }
+];
 
 const DM = {
-  ext:  { label: "Extreme Demon", color: "#f87171", glow: "rgba(248,113,113,0.18)", pts: 150 },
-  ins:  { label: "Insane Demon",  color: "#c084fc", glow: "rgba(192,132,252,0.18)", pts: 80  },
-  hard: { label: "Hard Demon",    color: "#fb923c", glow: "rgba(251,146,60,0.18)",  pts: 30  },
-  med:  { label: "Medium Demon",  color: "#38bdf8", glow: "rgba(56,189,248,0.18)",  pts: 10  },
+  ext: { label: "Extreme Demon", color: "#f87171", glow: "rgba(248,113,113,0.18)", pts: 150 },
+  ins: { label: "Insane Demon", color: "#c084fc", glow: "rgba(192,132,252,0.18)", pts: 80 },
+  hard: { label: "Hard Demon", color: "#fb923c", glow: "rgba(251,146,60,0.18)", pts: 30 },
+  med: { label: "Medium Demon", color: "#38bdf8", glow: "rgba(56,189,248,0.18)", pts: 10 },
 };
 
 const DEMONS_DATA = {
   ext: [
-    { id:"EX01", name:"Acheron",              creator:"Silentium",     color:"#1a0a2e", accent:"#7c3aed" },
-    { id:"EX02", name:"Abyss of Darkness",    creator:"Pennutoh",      color:"#0a0a1a", accent:"#2563eb" },
-    { id:"EX03", name:"Kyouki",               creator:"xSmokes",       color:"#1a0a0a", accent:"#dc2626" },
-    { id:"EX04", name:"LIMBO",                creator:"Doggie",        color:"#0f0f0f", accent:"#6366f1" },
-    { id:"EX05", name:"Kenos",                creator:"Dudex",         color:"#0a1a0a", accent:"#16a34a" },
-    { id:"EX06", name:"The Golden",           creator:"AeonAir",       color:"#1a1200", accent:"#d97706" },
-    { id:"EX07", name:"Zodiac",               creator:"Xcy7",          color:"#1a0a1a", accent:"#9333ea" },
-    { id:"EX08", name:"Tartarus",             creator:"Dolphy",        color:"#0a0a0a", accent:"#ef4444" },
-    { id:"EX09", name:"Slaughterhouse",       creator:"Woeful",        color:"#1a0505", accent:"#b91c1c" },
-    { id:"EX10", name:"Genocide",             creator:"Knobbelboy",    color:"#050a1a", accent:"#3b82f6" },
+    { id:"EX01", name:"Acheron", creator:"Silentium", color:"#1a0a2e", accent:"#7c3aed" },
+    { id:"EX02", name:"Abyss of Darkness", creator:"Pennutoh", color:"#0a0a1a", accent:"#2563eb" },
+    { id:"EX03", name:"Kyouki", creator:"xSmokes", color:"#1a0a0a", accent:"#dc2626" },
+    { id:"EX04", name:"LIMBO", creator:"Doggie", color:"#0f0f0f", accent:"#6366f1" },
+    { id:"EX05", name:"Kenos", creator:"Dudex", color:"#0a1a0a", accent:"#16a34a" },
+    { id:"EX06", name:"The Golden", creator:"AeonAir", color:"#1a1200", accent:"#d97706" },
+    { id:"EX07", name:"Zodiac", creator:"Xcy7", color:"#1a0a1a", accent:"#9333ea" },
+    { id:"EX08", name:"Tartarus", creator:"Dolphy", color:"#0a0a0a", accent:"#ef4444" },
+    { id:"EX09", name:"Slaughterhouse", creator:"Woeful", color:"#1a0505", accent:"#b91c1c" },
+    { id:"EX10", name:"Genocide", creator:"Knobbelboy", color:"#050a1a", accent:"#3b82f6" },
   ],
   ins: [
-    { id:"IN01", name:"Cataclysm",            creator:"Ggb0y",         color:"#0a0a1a", accent:"#6366f1" },
-    { id:"IN02", name:"Sonic Wave Infinity",  creator:"Riot",          color:"#00101a", accent:"#0ea5e9" },
-    { id:"IN03", name:"Artificial Ascent",    creator:"Stilluzen",     color:"#0a1a0a", accent:"#22c55e" },
-    { id:"IN04", name:"Windy Landscape",      creator:"Zobros",        color:"#0a1210", accent:"#14b8a6" },
-    { id:"IN05", name:"Yatagarasu",           creator:"Woffy",         color:"#1a0a00", accent:"#f59e0b" },
-    { id:"IN06", name:"Phobos",               creator:"Bl4zze",        color:"#150005", accent:"#e11d48" },
-    { id:"IN07", name:"Erebus",               creator:"Temp",          color:"#050510", accent:"#8b5cf6" },
-    { id:"IN08", name:"Athanatos",            creator:"Bianox",        color:"#001010", accent:"#06b6d4" },
-    { id:"IN09", name:"Supersonic",           creator:"Roadbose",      color:"#100a00", accent:"#ea580c" },
-    { id:"IN10", name:"Poltergeist",          creator:"Bianox",        color:"#0a0010", accent:"#a855f7" },
+    { id:"IN01", name:"Cataclysm", creator:"Ggb0y", color:"#0a0a1a", accent:"#6366f1" },
+    { id:"IN02", name:"Sonic Wave Infinity", creator:"Riot", color:"#00101a", accent:"#0ea5e9" },
+    { id:"IN03", name:"Artificial Ascent", creator:"Stilluzen", color:"#0a1a0a", accent:"#22c55e" },
+    { id:"IN04", name:"Windy Landscape", creator:"Zobros", color:"#0a1210", accent:"#14b8a6" },
+    { id:"IN05", name:"Yatagarasu", creator:"Woffy", color:"#1a0a00", accent:"#f59e0b" },
+    { id:"IN06", name:"Phobos", creator:"Bl4zze", color:"#150005", accent:"#e11d48" },
+    { id:"IN07", name:"Erebus", creator:"Temp", color:"#050510", accent:"#8b5cf6" },
+    { id:"IN08", name:"Athanatos", creator:"Bianox", color:"#001010", accent:"#06b6d4" },
+    { id:"IN09", name:"Supersonic", creator:"Roadbose", color:"#100a00", accent:"#ea580c" },
+    { id:"IN10", name:"Poltergeist", creator:"Bianox", color:"#0a0010", accent:"#a855f7" },
   ],
   hard: [
-    { id:"HD01", name:"Clubstep",              creator:"RobTop",       color:"#001a0a", accent:"#10b981" },
-    { id:"HD02", name:"Theory of Everything 2",creator:"RobTop",       color:"#0a001a", accent:"#7c3aed" },
-    { id:"HD03", name:"Deadlocked",            creator:"RobTop",       color:"#1a0000", accent:"#dc2626" },
-    { id:"HD04", name:"Blast Processing",      creator:"TMB50",        color:"#001020", accent:"#2563eb" },
-    { id:"HD05", name:"Jawbreaker",            creator:"TMB50",        color:"#1a0a00", accent:"#f59e0b" },
-    { id:"HD06", name:"Speed Racer",           creator:"Ggb0y",        color:"#1a1000", accent:"#eab308" },
-    { id:"HD07", name:"Dark Rainbow",          creator:"Xaro",         color:"#0a001a", accent:"#ec4899" },
-    { id:"HD08", name:"The Realistic",         creator:"Jeyzor",       color:"#001a10", accent:"#059669" },
-    { id:"HD09", name:"Nine Circles",          creator:"Zobros",       color:"#00101a", accent:"#0284c7" },
-    { id:"HD10", name:"Impulse",               creator:"npesta",       color:"#100020", accent:"#9333ea" },
+    { id:"HD01", name:"Clubstep", creator:"RobTop", color:"#001a0a", accent:"#10b981" },
+    { id:"HD02", name:"Theory of Everything 2", creator:"RobTop", color:"#0a001a", accent:"#7c3aed" },
+    { id:"HD03", name:"Deadlocked", creator:"RobTop", color:"#1a0000", accent:"#dc2626" },
+    { id:"HD04", name:"Blast Processing", creator:"TMB50", color:"#001020", accent:"#2563eb" },
+    { id:"HD05", name:"Jawbreaker", creator:"TMB50", color:"#1a0a00", accent:"#f59e0b" },
+    { id:"HD06", name:"Speed Racer", creator:"Ggb0y", color:"#1a1000", accent:"#eab308" },
+    { id:"HD07", name:"Dark Rainbow", creator:"Xaro", color:"#0a001a", accent:"#ec4899" },
+    { id:"HD08", name:"The Realistic", creator:"Jeyzor", color:"#001a10", accent:"#059669" },
+    { id:"HD09", name:"Nine Circles", creator:"Zobros", color:"#00101a", accent:"#0284c7" },
+    { id:"HD10", name:"Impulse", creator:"npesta", color:"#100020", accent:"#9333ea" },
   ],
   med: [
-    { id:"MD01", name:"Hexagon Force",         creator:"RobTop",       color:"#001510", accent:"#34d399" },
-    { id:"MD02", name:"Geometrical Dominator", creator:"RobTop",       color:"#1a0a00", accent:"#fb923c" },
-    { id:"MD03", name:"Ultra Violence",        creator:"Viprin",       color:"#0a0a1a", accent:"#818cf8" },
-    { id:"MD04", name:"Crimson Planet",        creator:"RealTriangle", color:"#1a0005", accent:"#f43f5e" },
-    { id:"MD05", name:"Nine Circles",          creator:"Zobros",       color:"#00101a", accent:"#38bdf8" },
+    { id:"MD01", name:"Hexagon Force", creator:"RobTop", color:"#001510", accent:"#34d399" },
+    { id:"MD02", name:"Geometrical Dominator", creator:"RobTop", color:"#1a0a00", accent:"#fb923c" },
+    { id:"MD03", name:"Ultra Violence", creator:"Viprin", color:"#0a0a1a", accent:"#818cf8" },
+    { id:"MD04", name:"Crimson Planet", creator:"RealTriangle", color:"#1a0005", accent:"#f43f5e" },
+    { id:"MD05", name:"Nine Circles", creator:"Zobros", color:"#00101a", accent:"#38bdf8" },
   ],
 };
 
@@ -64,9 +77,6 @@ const ALL_DEMONS = Object.entries(DEMONS_DATA).flatMap(([diff, arr]) =>
   arr.map(d => ({ ...d, diff, diffPts: DM[diff].pts }))
 );
 
-/* ════════════════════════════════════════════════
-   STORAGE HELPERS
-════════════════════════════════════════════════ */
 const load = () => {
   try {
     const raw = localStorage.getItem(SK);
@@ -83,7 +93,6 @@ const save = (state) => {
   try { localStorage.setItem(SK, JSON.stringify(state)); } catch {}
 };
 
-// Session management
 const saveSession = (user) => {
   if (user) {
     localStorage.setItem(SESSION_KEY, JSON.stringify({ username: user.username }));
@@ -104,9 +113,6 @@ const loadSession = (db) => {
   return null;
 };
 
-/* ════════════════════════════════════════════════
-   UI PRIMITIVES
-════════════════════════════════════════════════ */
 const Bar = ({ value, color }) => (
   <div style={{ flex: 1, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.07)", overflow: "hidden", minWidth: 0 }}>
     <div style={{ width: `${value}%`, height: "100%", background: color, borderRadius: 2, transition: "width 0.4s" }} />
@@ -136,20 +142,57 @@ const Btn = ({ children, onClick, color = "#f87171", outline, style = {}, small 
   >{children}</button>
 );
 
-const Input = ({ label, type = "text", value, onChange, placeholder, style = {} }) => (
-  <div style={{ marginBottom: 14 }}>
-    {label && <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>}
-    <input
-      type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
-      style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", outline: "none", ...style }}
-    />
-  </div>
-);
+const Input = ({ label, type = "text", value, onChange, placeholder, style = {} }) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const isPassword = type === "password";
+  
+  return (
+    <div style={{ marginBottom: 14 }}>
+      {label && <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>{label}</div>}
+      <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+        <input
+          type={isPassword && showPassword ? "text" : type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", paddingRight: isPassword ? 40 : 12, outline: "none", ...style }}
+        />
+        {isPassword && (
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            style={{ position: "absolute", right: 12, background: "transparent", border: "none", color: "#6b6b88", cursor: "pointer", fontSize: 16 }}
+          >
+            {showPassword ? "🙈" : "👁"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
-/* ════════════════════════════════════════════════
-   LEVEL ART (упрощён)
-════════════════════════════════════════════════ */
-function LevelArt({ demon, diff, size = 110 }) {
+const UserAvatar = ({ user, size = 40 }) => {
+  const [imgError, setImgError] = useState(false);
+  
+  if (user?.avatar && !imgError) {
+    return (
+      <img 
+        src={user.avatar} 
+        alt={user.username}
+        style={{ width: size, height: size, borderRadius: "50%", objectFit: "cover", background: "linear-gradient(135deg,#f87171,#c084fc)" }}
+        onError={() => setImgError(true)}
+      />
+    );
+  }
+  
+  return (
+    <div style={{ width: size, height: size, borderRadius: "50%", background: "linear-gradient(135deg,#f87171,#c084fc)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: Math.floor(size * 0.4), color: "#0f1117", flexShrink: 0 }}>
+      {user?.username?.[0]?.toUpperCase() || "?"}
+    </div>
+  );
+};
+
+const LevelArt = ({ demon, diff, size = 110 }) => {
   const m = DM[diff];
   const acc = demon.accent || m.color;
   const words = demon.name.split(" ");
@@ -171,32 +214,54 @@ function LevelArt({ demon, diff, size = 110 }) {
       </div>
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   AUTH PAGE
-════════════════════════════════════════════════ */
-function AuthPage({ onAuth, db }) {
+const AuthPage = ({ onAuth, db }) => {
   const [mode, setMode] = useState("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
+  const [animating, setAnimating] = useState(false);
+
+  const switchMode = (newMode) => {
+    if (animating) return;
+    setAnimating(true);
+    setTimeout(() => {
+      setMode(newMode);
+      setErr("");
+      setUsername("");
+      setPassword("");
+      setTimeout(() => setAnimating(false), 50);
+    }, 150);
+  };
+
+  const validateUsername = (u) => u.length >= 3 && u.length <= 20 && /^[a-zA-Z0-9_]+$/.test(u);
+  const validatePassword = (p) => p.length >= 6 && p.length <= 30;
 
   const handle = () => {
     setErr("");
     const u = username.trim();
-    if (!u || !password) { setErr("Заполните все поля"); return; }
+    const p = password.trim();
+    
+    if (!u || !p) { setErr("Заполните все поля"); return; }
+    
     if (mode === "login") {
-      const found = db.users.find(x => x.username === u && x.password === password);
+      const found = db.users.find(x => x.username === u && x.password === p);
       if (!found) { setErr("Неверный логин или пароль"); return; }
       onAuth(found);
     } else {
-      if (u.length < 3) { setErr("Ник минимум 3 символа"); return; }
-      if (password.length < 6) { setErr("Пароль минимум 6 символов"); return; }
+      if (!validateUsername(u)) { setErr("Ник от 3 до 20 символов (буквы, цифры, _)"); return; }
+      if (!validatePassword(p)) { setErr("Пароль от 6 до 30 символов"); return; }
       if (db.users.find(x => x.username === u)) { setErr("Такой ник уже занят"); return; }
-      const newUser = { username: u, password, role: "user", points: 0, completions: {}, displayName: u };
+      const newUser = { username: u, password: p, role: "user", points: 0, completions: {}, displayName: u, avatar: null };
       onAuth(newUser, true);
     }
+  };
+
+  const formStyle = {
+    transition: "opacity 0.15s ease-in-out, transform 0.15s ease-in-out",
+    opacity: animating ? 0 : 1,
+    transform: animating ? "translateX(8px)" : "translateX(0)"
   };
 
   return (
@@ -208,27 +273,30 @@ function AuthPage({ onAuth, db }) {
         <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 28 }}>
           {mode === "login" ? "Войдите в свой аккаунт" : "Создайте новый аккаунт"}
         </div>
-        <Input label="Ник (GD username)" value={username} onChange={setUsername} placeholder="username" />
-        <Input label="Пароль" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+        
+        <div style={formStyle}>
+          <Input label="Ник (GD username)" value={username} onChange={setUsername} placeholder="username" />
+          <Input label="Пароль" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
+        </div>
+        
         {err && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 12, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "8px 12px" }}>{err}</div>}
+        
         <Btn onClick={handle} color="#f87171" style={{ width: "100%", padding: "11px" }}>
           {mode === "login" ? "Войти" : "Зарегистрироваться"}
         </Btn>
+        
         <div style={{ textAlign: "center", marginTop: 16, fontSize: 13, color: "#6b6b88" }}>
           {mode === "login" ? "Нет аккаунта? " : "Уже есть аккаунт? "}
-          <span onClick={() => { setMode(mode === "login" ? "reg" : "login"); setErr(""); }} style={{ color: "#c084fc", cursor: "pointer", fontWeight: 600 }}>
+          <span onClick={() => switchMode(mode === "login" ? "reg" : "login")} style={{ color: "#c084fc", cursor: "pointer", fontWeight: 600 }}>
             {mode === "login" ? "Регистрация" : "Войти"}
           </span>
         </div>
       </div>
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   SUBMIT MODAL (ТОЛЬКО Telegram username + процент)
-════════════════════════════════════════════════ */
-function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
+const SubmitModal = ({ open, onClose, user, demon, db, onUpdate }) => {
   const [tgUsername, setTgUsername] = useState("");
   const [percent, setPercent] = useState(50);
   const [error, setError] = useState("");
@@ -317,12 +385,9 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
       </div>
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   DEMON CARD
-════════════════════════════════════════════════ */
-function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
+const DemonCard = ({ demon, diff, rank, user, approved, onSubmit }) => {
   const [open, setOpen] = useState(false);
   const meta = DM[diff];
   const rankColor = rank === 0 ? "#fbbf24" : rank === 1 ? "#94a3b8" : rank === 2 ? "#c47a3a" : "#44445a";
@@ -342,7 +407,6 @@ function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
         <div style={{ flex: 1, minWidth: 0, padding: "10px 12px", display: "flex", flexDirection: "column", justifyContent: "center", gap: 4 }}>
           <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#eaeaf4", wordBreak: "break-word" }}>{demon.name}</div>
           <div style={{ fontSize: 12, color: "#6b6b88", display: "flex", alignItems: "center", gap: 4 }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" style={{ opacity: 0.5, flexShrink: 0 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
             <span>{demon.creator}</span>
             <span style={{ opacity: 0.4, fontFamily: "monospace", fontSize: 10 }}>· {meta.pts} pts</span>
           </div>
@@ -367,19 +431,15 @@ function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
             После проверки администратором — баллы начислятся автоматически.
           </div>
           <Btn onClick={() => onSubmit(demon)} color="#229ED9" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
             Подать прогресс в Telegram
           </Btn>
         </div>
       )}
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   LIST PAGE
-════════════════════════════════════════════════ */
-function ListPage({ user, approved, onSubmit }) {
+const ListPage = ({ user, approved, onSubmit }) => {
   const keys = ["ext", "ins", "hard", "med"];
   return (
     <div>
@@ -392,7 +452,6 @@ function ListPage({ user, approved, onSubmit }) {
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                 <div style={{ width: 3, height: 22, borderRadius: 2, background: meta.color, boxShadow: `0 0 14px ${meta.glow}`, flexShrink: 0 }} />
                 <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 16, color: meta.color }}>{meta.label}</span>
-                <span style={{ fontFamily: "monospace", fontSize: 10, color: "#44445a", background: "rgba(255,255,255,0.05)", padding: "2px 8px", borderRadius: 20 }}>{demons.length}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {demons.map((d, idx) => (
@@ -406,12 +465,9 @@ function ListPage({ user, approved, onSubmit }) {
       })}
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   PROFILE PAGE
-════════════════════════════════════════════════ */
-function ProfilePage({ user, approved }) {
+const ProfilePage = ({ user, approved }) => {
   const myRecs = approved.filter(a => a.username === user.username);
   const beaten = myRecs.filter(a => a.percent >= 100);
   const progress = myRecs.filter(a => a.percent < 100);
@@ -450,11 +506,9 @@ function ProfilePage({ user, approved }) {
   return (
     <div>
       <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px 18px", marginBottom: 16, display: "flex", alignItems: "center", gap: 16 }}>
-        <div style={{ width: 52, height: 52, borderRadius: "50%", background: "linear-gradient(135deg,#f87171,#c084fc)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 20, color: "#0f1117", flexShrink: 0 }}>
-          {user.username[0].toUpperCase()}
-        </div>
+        <UserAvatar user={user} size={52} />
         <div>
-          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: "#eaeaf4" }}>{user.username}</div>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: "#eaeaf4" }}>{user.displayName || user.username}</div>
           <div style={{ fontSize: 12, color: "#6b6b88", marginTop: 2 }}>{user.role === "admin" ? "👑 Администратор" : "Игрок"}</div>
         </div>
         <div style={{ marginLeft: "auto", textAlign: "right" }}>
@@ -489,12 +543,186 @@ function ProfilePage({ user, approved }) {
       )}
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   LEADERBOARD PAGE
-════════════════════════════════════════════════ */
-function LeaderboardPage({ db, approved }) {
+const AboutPage = () => {
+  return (
+    <div>
+      <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "24px 20px", marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 24, color: "#f87171" }}>GD·Demons</div>
+          <div style={{ background: "rgba(248,113,113,0.15)", padding: "4px 10px", borderRadius: 20, fontSize: 12, color: "#f87171" }}>{APP_VERSION}</div>
+        </div>
+        <p style={{ fontSize: 14, color: "#b8b8d0", lineHeight: 1.6, marginBottom: 20 }}>
+          Трекер прогресса для прохождения демонов в Geometry Dash.
+        </p>
+        
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#6b6b88", marginBottom: 12, letterSpacing: 1 }}>🔗 ССЫЛКИ</div>
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+          <a href="#" style={{ color: "#f87171", textDecoration: "none", background: "rgba(255,255,255,0.05)", padding: "8px 16px", borderRadius: 30 }}>📺 YouTube</a>
+          <a href="#" style={{ color: "#818cf8", textDecoration: "none", background: "rgba(255,255,255,0.05)", padding: "8px 16px", borderRadius: 30 }}>💬 Discord</a>
+          <a href="https://t.me/+rxTdIyv5aeUzOTUy" target="_blank" style={{ color: "#229ED9", textDecoration: "none", background: "rgba(255,255,255,0.05)", padding: "8px 16px", borderRadius: 30 }}>📱 Telegram</a>
+        </div>
+      </div>
+
+      <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "20px" }}>
+        <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 16, color: "#eaeaf4" }}>📋 История обновлений</div>
+        {UPDATE_HISTORY.map((update, idx) => (
+          <div key={idx} style={{ marginBottom: 20, borderLeft: "2px solid rgba(248,113,113,0.5)", paddingLeft: 16 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 8, flexWrap: "wrap" }}>
+              <span style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 14, color: "#f87171" }}>{update.version}</span>
+              <span style={{ fontSize: 11, color: "#6b6b88" }}>{update.date}</span>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 20, fontSize: 12, color: "#b8b8d0", lineHeight: 1.7 }}>
+              {update.changes.map((change, i) => <li key={i}>{change}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const SettingsPage = ({ user, db, onUpdate, onLogout }) => {
+  const [newUsername, setNewUsername] = useState(user.displayName || user.username);
+  const [newAvatar, setNewAvatar] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(user.avatar);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handleChangeUsername = () => {
+    setError("");
+    setSuccess("");
+    const username = newUsername.trim();
+    
+    if (!username || username.length < 3 || username.length > 20) {
+      setError("Ник должен быть от 3 до 20 символов");
+      return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      setError("Ник может содержать только буквы, цифры и _");
+      return;
+    }
+    if (db.users.find(u => u.username === username && u.username !== user.username)) {
+      setError("Этот ник уже занят");
+      return;
+    }
+    
+    const newDb = {
+      ...db,
+      users: db.users.map(u => {
+        if (u.username === user.username) {
+          return { ...u, username: username, displayName: username };
+        }
+        return u;
+      }),
+      approved: db.approved.map(a => {
+        if (a.username === user.username) return { ...a, username: username };
+        return a;
+      }),
+      pending: db.pending.map(p => {
+        if (p.username === user.username) return { ...p, username: username };
+        return p;
+      })
+    };
+    
+    onUpdate(newDb);
+    saveSession({ username: username });
+    setSuccess("Ник успешно изменён! Перезайдите для применения.");
+    setTimeout(() => { setSuccess(""); onLogout(); }, 2000);
+  };
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Можно загружать только изображения");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setError("Размер изображения не должен превышать 2MB");
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const newDb = {
+        ...db,
+        users: db.users.map(u => {
+          if (u.username === user.username) {
+            return { ...u, avatar: reader.result };
+          }
+          return u;
+        })
+      };
+      onUpdate(newDb);
+      setAvatarPreview(reader.result);
+      setSuccess("Аватарка обновлена!");
+      setTimeout(() => setSuccess(""), 2000);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    const newDb = {
+      ...db,
+      users: db.users.map(u => {
+        if (u.username === user.username) {
+          return { ...u, avatar: null };
+        }
+        return u;
+      })
+    };
+    onUpdate(newDb);
+    setAvatarPreview(null);
+    setSuccess("Аватарка удалена!");
+    setTimeout(() => setSuccess(""), 2000);
+  };
+
+  return (
+    <div>
+      <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "24px 20px", marginBottom: 20 }}>
+        <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 18, marginBottom: 20, color: "#eaeaf4" }}>⚙️ Настройки аккаунта</div>
+        
+        {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 16, background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.2)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
+        {success && <div style={{ fontSize: 12, color: "#4ade80", marginBottom: 16, background: "rgba(74,222,128,0.08)", border: "1px solid rgba(74,222,128,0.2)", borderRadius: 8, padding: "8px 12px" }}>{success}</div>}
+        
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 12 }}>Аватар</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+            <UserAvatar user={user} size={80} />
+            <div>
+              <label style={{ background: "#f87171", color: "#0f1117", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", display: "inline-block" }}>
+                Загрузить новое фото
+                <input type="file" accept="image/*" onChange={handleAvatarChange} style={{ display: "none" }} />
+              </label>
+              {avatarPreview && (
+                <button onClick={handleRemoveAvatar} style={{ marginLeft: 12, background: "transparent", border: "1px solid rgba(248,113,113,0.5)", color: "#f87171", padding: "8px 16px", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                  Удалить
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>Никнейм</div>
+          <input 
+            type="text" 
+            value={newUsername} 
+            onChange={e => setNewUsername(e.target.value)} 
+            placeholder="Новый ник" 
+            style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", outline: "none", marginBottom: 12 }}
+          />
+          <Btn onClick={handleChangeUsername} color="#f87171" small>Изменить ник</Btn>
+          <p style={{ fontSize: 11, color: "#6b6b88", marginTop: 8 }}>* После смены ника нужно будет войти заново</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const LeaderboardPage = ({ db, approved }) => {
   const ranked = [...db.users]
     .map(u => ({ ...u, approvedList: approved.filter(a => a.username === u.username) }))
     .sort((a, b) => b.points - a.points);
@@ -509,12 +737,10 @@ function LeaderboardPage({ db, approved }) {
           return (
             <div key={u.username} style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", display: "flex", alignItems: "center", gap: 14 }}>
               <div style={{ fontFamily: "monospace", fontWeight: 700, fontSize: 16, color: rc, width: 28, textAlign: "center", flexShrink: 0 }}>#{i + 1}</div>
-              <div style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg,#f87171,#c084fc)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 15, color: "#0f1117", flexShrink: 0 }}>
-                {u.username[0].toUpperCase()}
-              </div>
+              <UserAvatar user={u} size={38} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#eaeaf4" }}>
-                  {u.username} {u.role === "admin" && <span style={{ fontSize: 10, color: "#fbbf24" }}>👑</span>}
+                  {u.displayName || u.username} {u.role === "admin" && <span style={{ fontSize: 10, color: "#fbbf24" }}>👑</span>}
                 </div>
                 <div style={{ fontSize: 11, color: "#6b6b88" }}>{beaten} пройдено · {u.approvedList.length} подтверждений</div>
               </div>
@@ -526,18 +752,14 @@ function LeaderboardPage({ db, approved }) {
       </div>
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   ADMIN PANEL
-════════════════════════════════════════════════ */
-function AdminPanel({ db, onUpdate, currentUser }) {
+const AdminPanel = ({ db, onUpdate, currentUser }) => {
   const [activeTab, setActiveTab] = useState("pending");
   const [ptUser, setPtUser] = useState("");
   const [ptAmt, setPtAmt] = useState("");
   const [ptNote, setPtNote] = useState("");
   const [flash, setFlash] = useState("");
-
   const [selUser, setSelUser] = useState("");
   const [selDemon, setSelDemon] = useState("");
   const [selPct, setSelPct] = useState("100");
@@ -591,138 +813,81 @@ function AdminPanel({ db, onUpdate, currentUser }) {
     setPtAmt(""); setPtNote("");
   };
 
-  const adminTabs = [
-    { k: "pending", l: `Заявки (${db.pending.length})` },
-    { k: "manual", l: "Добавить вручную" },
-    { k: "users", l: "Пользователи" },
-    { k: "points", l: "Баллы" },
-  ];
-
-  const tabStyle = (k) => ({
-    fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 12,
-    padding: "6px 12px", border: "none", borderRadius: 8,
-    background: activeTab === k ? "rgba(251,191,36,0.15)" : "transparent",
-    color: activeTab === k ? "#fbbf24" : "#6b6b88",
-    cursor: "pointer", whiteSpace: "nowrap",
-  });
-
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18 }}>
-        <span style={{ fontSize: 16 }}>👑</span>
-        <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: "#fbbf24" }}>Панель администратора</span>
-      </div>
-
-      {flash && <div style={{ background: "rgba(74,222,128,0.1)", border: "1px solid rgba(74,222,128,0.25)", borderRadius: 10, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#4ade80" }}>{flash}</div>}
-
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap", background: "#181b27", borderRadius: 10, padding: 4 }}>
-        {adminTabs.map(t => <button key={t.k} onClick={() => setActiveTab(t.k)} style={tabStyle(t.k)}>{t.l}</button>)}
-      </div>
-
-      {activeTab === "pending" && (
-        <div>
-          {db.pending.length === 0 ? (
-            <div style={{ textAlign: "center", color: "#6b6b88", padding: "40px 20px", background: "#181b27", borderRadius: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>✅</div>
-              <p style={{ fontSize: 13 }}>Нет ожидающих заявок</p>
-            </div>
-          ) : db.pending.map(p => {
-            const demon = ALL_DEMONS.find(d => d.id === p.demonId);
-            const diff = demon?.diff;
-            return (
-              <div key={p.id} style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", marginBottom: 8 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#eaeaf4" }}>{p.username}</span>
-                  <span style={{ color: "#6b6b88" }}>→</span>
-                  <span style={{ fontFamily: "'Syne',sans-serif", fontWeight: 600, fontSize: 13, color: diff ? DM[diff].color : "#eaeaf4" }}>{demon?.name}</span>
-                  {diff && <DiffBadge diff={diff} />}
-                  <span style={{ fontFamily: "monospace", fontSize: 12, color: "#fbbf24" }}>{p.percent}%</span>
-                  <span style={{ marginLeft: "auto", fontSize: 10, color: "#44445a" }}>{new Date(p.submittedAt).toLocaleString("ru")}</span>
-                </div>
-                {p.note && <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px" }}>{p.note}</div>}
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Btn onClick={() => doApprove(p)} color="#4ade80" small>✓ Одобрить</Btn>
-                  <Btn onClick={() => doReject(p)} color="#f87171" outline small>✗ Отклонить</Btn>
-                </div>
-              </div>
-            );
-          })}
+      <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "16px" }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 10 }}>
+          <button onClick={() => setActiveTab("pending")} style={{ background: activeTab === "pending" ? "#f87171" : "transparent", color: activeTab === "pending" ? "#0f1117" : "#6b6b88", border: "none", padding: "6px 12px", borderRadius: 6, cursor: "pointer" }}>Заявки ({db.pending.length})</button>
+          <button onClick={() => setActiveTab("manual")} style={{ background: activeTab === "manual" ? "#f87171" : "transparent", color: activeTab === "manual" ? "#0f1117" : "#6b6b88", border: "none", padding: "6px 12px", borderRadius: 6, cursor: "pointer" }}>Добавить вручную</button>
+          <button onClick={() => setActiveTab("users")} style={{ background: activeTab === "users" ? "#f87171" : "transparent", color: activeTab === "users" ? "#0f1117" : "#6b6b88", border: "none", padding: "6px 12px", borderRadius: 6, cursor: "pointer" }}>Пользователи</button>
+          <button onClick={() => setActiveTab("points")} style={{ background: activeTab === "points" ? "#f87171" : "transparent", color: activeTab === "points" ? "#0f1117" : "#6b6b88", border: "none", padding: "6px 12px", borderRadius: 6, cursor: "pointer" }}>Баллы</button>
         </div>
-      )}
 
-      {activeTab === "manual" && (
-        <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "18px 16px" }}>
-          <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 16 }}>Добавить подтверждённый прогресс вручную (без заявки)</div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>Игрок</div>
-            <select value={selUser} onChange={e => setSelUser(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", outline: "none" }}>
-              <option value="">Выберите игрока</option>
-              {db.users.map(u => <option key={u.username} value={u.username}>{u.username}</option>)}
-            </select>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>Уровень</div>
-            <select value={selDemon} onChange={e => setSelDemon(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", outline: "none" }}>
-              <option value="">Выберите уровень</option>
-              {Object.entries(DEMONS_DATA).flatMap(([diff, arr]) => arr.map(d => <option key={d.id} value={d.id}>[{DM[diff].label.split(" ")[0]}] {d.name}</option>))}
-            </select>
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>Процент</div>
-            <input type="number" min="1" max="100" value={selPct} onChange={e => setSelPct(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "monospace", fontSize: 14, padding: "10px 12px", outline: "none" }} />
-          </div>
-          <Btn onClick={doAddManual} color="#4ade80">Добавить прогресс</Btn>
-        </div>
-      )}
+        {flash && <div style={{ background: "#4ade8022", border: "1px solid #4ade80", borderRadius: 8, padding: "8px 12px", marginBottom: 12, fontSize: 12, color: "#4ade80" }}>{flash}</div>}
 
-      {activeTab === "users" && (
-        <div>
-          {db.users.map(u => {
-            const recs = db.approved.filter(a => a.username === u.username);
-            const beaten = recs.filter(a => a.percent >= 100).length;
-            return (
-              <div key={u.username} style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "14px 16px", marginBottom: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ width: 36, height: 36, borderRadius: "50%", background: "linear-gradient(135deg,#f87171,#c084fc)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 14, color: "#0f1117", flexShrink: 0 }}>
-                  {u.username[0].toUpperCase()}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 14, color: "#eaeaf4" }}>
-                    {u.username} {u.role === "admin" && <span style={{ fontSize: 10, color: "#fbbf24" }}>👑</span>}
+        {activeTab === "pending" && (
+          <div>
+            {db.pending.length === 0 ? <div style={{ textAlign: "center", color: "#6b6b88", padding: 20 }}>Нет заявок</div> : db.pending.map(p => {
+              const demon = ALL_DEMONS.find(d => d.id === p.demonId);
+              return (
+                <div key={p.id} style={{ background: "#13151e", borderRadius: 8, padding: 12, marginBottom: 8 }}>
+                  <div><b>{p.username}</b> → {demon?.name} ({p.percent}%)</div>
+                  <div style={{ fontSize: 11, color: "#6b6b88", marginTop: 4 }}>{p.note}</div>
+                  <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                    <Btn onClick={() => doApprove(p)} color="#4ade80" small>✓ Одобрить</Btn>
+                    <Btn onClick={() => doReject(p)} color="#f87171" outline small>✗ Отклонить</Btn>
                   </div>
-                  <div style={{ fontSize: 11, color: "#6b6b88" }}>{beaten} пройдено · {recs.length} записей</div>
                 </div>
-                <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, color: "#fbbf24" }}>{u.points} pts</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              );
+            })}
+          </div>
+        )}
 
-      {activeTab === "points" && (
-        <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "18px 16px" }}>
-          <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 16 }}>Вручную изменить баллы игрока</div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: 1, color: "#6b6b88", textTransform: "uppercase", marginBottom: 6 }}>Игрок</div>
-            <select value={ptUser} onChange={e => setPtUser(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", fontSize: 14, padding: "10px 12px", outline: "none" }}>
+        {activeTab === "manual" && (
+          <div>
+            <select value={selUser} onChange={e => setSelUser(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 8, marginBottom: 8, color: "#eaeaf4" }}>
               <option value="">Выберите игрока</option>
-              {db.users.map(u => <option key={u.username} value={u.username}>{u.username} ({u.points} pts)</option>)}
+              {db.users.map(u => <option key={u.username} value={u.username}>{u.displayName || u.username}</option>)}
             </select>
+            <select value={selDemon} onChange={e => setSelDemon(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 8, marginBottom: 8, color: "#eaeaf4" }}>
+              <option value="">Выберите уровень</option>
+              {ALL_DEMONS.map(d => <option key={d.id} value={d.id}>[{DM[d.diff].label}] {d.name}</option>)}
+            </select>
+            <input type="number" value={selPct} onChange={e => setSelPct(e.target.value)} placeholder="100" style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 8, marginBottom: 8, color: "#eaeaf4" }} />
+            <Btn onClick={doAddManual} color="#4ade80">Добавить</Btn>
           </div>
-          <Input label="Количество баллов" type="number" value={ptAmt} onChange={setPtAmt} placeholder="например: 50" />
-          <Input label="Причина (необязательно)" value={ptNote} onChange={setPtNote} placeholder="за что начислено/снято" />
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn onClick={() => doPoints(true)} color="#4ade80">+ Начислить</Btn>
-            <Btn onClick={() => doPoints(false)} color="#f87171" outline>− Снять</Btn>
+        )}
+
+        {activeTab === "users" && (
+          <div>
+            {db.users.map(u => (
+              <div key={u.username} style={{ display: "flex", alignItems: "center", gap: 8, padding: 8, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <UserAvatar user={u} size={30} />
+                <div style={{ flex: 1 }}>{u.displayName || u.username}</div>
+                <div>{u.points} pts</div>
+              </div>
+            ))}
           </div>
-        </div>
-      )}
+        )}
+
+        {activeTab === "points" && (
+          <div>
+            <select value={ptUser} onChange={e => setPtUser(e.target.value)} style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 8, marginBottom: 8, color: "#eaeaf4" }}>
+              <option value="">Выберите игрока</option>
+              {db.users.map(u => <option key={u.username} value={u.username}>{u.displayName || u.username} ({u.points} pts)</option>)}
+            </select>
+            <input type="number" value={ptAmt} onChange={e => setPtAmt(e.target.value)} placeholder="Количество" style={{ width: "100%", background: "#13151e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, padding: 8, marginBottom: 8, color: "#eaeaf4" }} />
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn onClick={() => doPoints(true)} color="#4ade80">+ Начислить</Btn>
+              <Btn onClick={() => doPoints(false)} color="#f87171" outline>− Снять</Btn>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
-}
+};
 
-/* ════════════════════════════════════════════════
-   APP
-════════════════════════════════════════════════ */
 export default function App() {
   const [db, setDb] = useState(load);
   const [currentUser, setCurrentUser] = useState(null);
@@ -757,7 +922,6 @@ export default function App() {
     setSubmitModal(true);
   };
 
-  // Восстановление сессии при загрузке
   useEffect(() => {
     const savedUser = loadSession(db);
     if (savedUser) {
@@ -765,7 +929,6 @@ export default function App() {
     }
   }, [db]);
 
-  // Обновляем currentUser если изменился db
   useEffect(() => {
     if (currentUser) {
       const fresh = db.users.find(u => u.username === currentUser.username);
@@ -776,63 +939,43 @@ export default function App() {
   if (!currentUser) return <AuthPage onAuth={handleAuth} db={db} />;
 
   const isAdmin = currentUser.role === "admin";
-  const TABS = [
-    { k: "list", l: "Список" },
-    { k: "profile", l: "Мой профиль" },
-    { k: "leaderboard", l: "Лидеры" },
-    ...(isAdmin ? [{ k: "admin", l: "👑 Админ" }] : []),
-  ];
 
   return (
-    <div style={{ background: "#0f1117", minHeight: "100vh", color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", margin: 0, padding: 0 }}>
+    <div style={{ background: "#0f1117", minHeight: "100vh", color: "#eaeaf4" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@400;500;600&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; padding: 0; background: #0f1117; }
         #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; }
-        input, select { -webkit-appearance: none; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #0f1117; }
-        ::-webkit-scrollbar-thumb { background: #1e2131; border-radius: 4px; }
       `}</style>
 
-      {/* HEADER */}
-      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,17,23,0.92)", backdropFilter: "blur(22px)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", height: 58, gap: 10 }}>
-        <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18, letterSpacing: -0.5, whiteSpace: "nowrap", display: "flex", alignItems: "baseline", gap: 2 }}>
-          GD<span style={{ color: "#f87171" }}>·</span>Demons
-        </div>
-        <nav style={{ display: "flex", gap: 2, overflowX: "auto" }}>
-          {TABS.map(t => (
-            <button key={t.k} onClick={() => setTab(t.k)} style={{ fontFamily: "'Outfit',sans-serif", fontWeight: 500, fontSize: 12, padding: "6px 12px", border: "none", borderRadius: 8, background: tab === t.k ? (t.k === "admin" ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.08)") : "transparent", color: tab === t.k ? (t.k === "admin" ? "#fbbf24" : "#eaeaf4") : "#6b6b88", cursor: "pointer", whiteSpace: "nowrap" }}>
-              {t.l}
-            </button>
-          ))}
+      <div style={{ position: "sticky", top: 0, zIndex: 100, background: "rgba(15,17,23,0.92)", backdropFilter: "blur(22px)", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 16px", height: 58 }}>
+        <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 18 }}>GD<span style={{ color: "#f87171" }}>·</span>Demons</div>
+        <nav style={{ display: "flex", gap: 4 }}>
+          <button onClick={() => setTab("list")} style={{ background: tab === "list" ? "rgba(255,255,255,0.08)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "list" ? "#eaeaf4" : "#6b6b88", cursor: "pointer" }}>Список</button>
+          <button onClick={() => setTab("profile")} style={{ background: tab === "profile" ? "rgba(255,255,255,0.08)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "profile" ? "#eaeaf4" : "#6b6b88", cursor: "pointer" }}>Профиль</button>
+          <button onClick={() => setTab("leaderboard")} style={{ background: tab === "leaderboard" ? "rgba(255,255,255,0.08)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "leaderboard" ? "#eaeaf4" : "#6b6b88", cursor: "pointer" }}>Лидеры</button>
+          <button onClick={() => setTab("about")} style={{ background: tab === "about" ? "rgba(255,255,255,0.08)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "about" ? "#eaeaf4" : "#6b6b88", cursor: "pointer" }}>О проекте</button>
+          <button onClick={() => setTab("settings")} style={{ background: tab === "settings" ? "rgba(255,255,255,0.08)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "settings" ? "#eaeaf4" : "#6b6b88", cursor: "pointer" }}>Настройки</button>
+          {isAdmin && <button onClick={() => setTab("admin")} style={{ background: tab === "admin" ? "rgba(251,191,36,0.15)" : "transparent", border: "none", padding: "6px 12px", borderRadius: 8, color: tab === "admin" ? "#fbbf24" : "#6b6b88", cursor: "pointer" }}>Админ</button>}
         </nav>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          <div style={{ fontFamily: "monospace", fontSize: 11, color: "#fbbf24", background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.2)", borderRadius: 6, padding: "3px 8px" }}>
-            {currentUser.points} pts
-          </div>
-          <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 12, color: "#eaeaf4" }}>{currentUser.username}</div>
-          <button onClick={handleLogout} style={{ fontFamily: "'Outfit',sans-serif", fontSize: 11, padding: "5px 10px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 7, background: "transparent", color: "#6b6b88", cursor: "pointer" }}>Выйти</button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <div style={{ fontSize: 12, color: "#fbbf24" }}>{currentUser.points} pts</div>
+          <UserAvatar user={currentUser} size={32} />
+          <button onClick={handleLogout} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 6, padding: "4px 10px", color: "#6b6b88", cursor: "pointer" }}>Выйти</button>
         </div>
       </div>
 
-      {/* CONTENT */}
-      <div style={{ maxWidth: 940, margin: "0 auto", padding: "24px 14px 80px" }}>
+      <div style={{ maxWidth: 940, margin: "0 auto", padding: "24px 16px 80px" }}>
         {tab === "list" && <ListPage user={currentUser} approved={db.approved} onSubmit={openSubmitModal} />}
         {tab === "profile" && <ProfilePage user={currentUser} approved={db.approved} />}
         {tab === "leaderboard" && <LeaderboardPage db={db} approved={db.approved} />}
+        {tab === "about" && <AboutPage />}
+        {tab === "settings" && <SettingsPage user={currentUser} db={db} onUpdate={updateDb} onLogout={handleLogout} />}
         {tab === "admin" && isAdmin && <AdminPanel db={db} onUpdate={updateDb} currentUser={currentUser} />}
       </div>
 
-      <SubmitModal 
-        open={submitModal} 
-        onClose={() => { setSubmitModal(false); setSelectedDemon(null); }} 
-        user={currentUser}
-        demon={selectedDemon}
-        db={db}
-        onUpdate={updateDb}
-      />
+      <SubmitModal open={submitModal} onClose={() => { setSubmitModal(false); setSelectedDemon(null); }} user={currentUser} demon={selectedDemon} db={db} onUpdate={updateDb} />
     </div>
   );
 }

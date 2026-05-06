@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 ════════════════════════════════════════════════ */
 const ADMIN_USER = { username: "kwarsed", password: "5179678nAta", role: "admin" };
 const SK = "gdml_v6";
+const SESSION_KEY = "gdml_current_user";
 
 const DM = {
   ext:  { label: "Extreme Demon", color: "#f87171", glow: "rgba(248,113,113,0.18)", pts: 150 },
@@ -63,8 +64,6 @@ const ALL_DEMONS = Object.entries(DEMONS_DATA).flatMap(([diff, arr]) =>
   arr.map(d => ({ ...d, diff, diffPts: DM[diff].pts }))
 );
 
-const getDemonDiff = id => ALL_DEMONS.find(d => d.id === id)?.diff;
-
 /* ════════════════════════════════════════════════
    STORAGE HELPERS
 ════════════════════════════════════════════════ */
@@ -79,39 +78,31 @@ const load = () => {
     approved: [],
   };
 };
+
 const save = (state) => {
   try { localStorage.setItem(SK, JSON.stringify(state)); } catch {}
 };
 
-/* ════════════════════════════════════════════════
-   LEVEL ART
-════════════════════════════════════════════════ */
-function LevelArt({ demon, diff, size = 110 }) {
-  const m = DM[diff];
-  const acc = demon.accent || m.color;
-  const words = demon.name.split(" ");
-  const initials = words.length >= 2 ? words[0][0] + words[1][0] : demon.name.slice(0, 2);
-  return (
-    <div style={{ width: size, flexShrink: 0, position: "relative", overflow: "hidden", background: demon.color || "#0a0a15", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.3 }} viewBox={`0 0 ${size} 80`} preserveAspectRatio="xMidYMid slice">
-        <defs>
-          <radialGradient id={`rg-${demon.id}`} cx="50%" cy="50%" r="70%">
-            <stop offset="0%" stopColor={acc} stopOpacity="0.9" />
-            <stop offset="100%" stopColor={acc} stopOpacity="0" />
-          </radialGradient>
-        </defs>
-        <rect width={size} height="80" fill={`url(#rg-${demon.id})`} />
-        {[20, 40, 60, 80, 100].map(x => <line key={x} x1={x} y1="0" x2={x} y2="80" stroke={acc} strokeOpacity="0.12" strokeWidth="0.5" />)}
-        {[20, 40, 60].map(y => <line key={y} x1="0" y1={y} x2={size} y2={y} stroke={acc} strokeOpacity="0.12" strokeWidth="0.5" />)}
-        <circle cx="0" cy="0" r="35" fill={acc} fillOpacity="0.12" />
-      </svg>
-      <div style={{ position: "relative", zIndex: 1, fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: acc, textShadow: `0 0 18px ${acc}88`, userSelect: "none" }}>
-        {initials.toUpperCase()}
-      </div>
-      <div style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 36, background: "linear-gradient(to right,transparent,#181b27)", pointerEvents: "none" }} />
-    </div>
-  );
-}
+// Session management
+const saveSession = (user) => {
+  if (user) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ username: user.username }));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
+};
+
+const loadSession = (db) => {
+  try {
+    const saved = localStorage.getItem(SESSION_KEY);
+    if (saved) {
+      const { username } = JSON.parse(saved);
+      const user = db.users.find(u => u.username === username);
+      if (user) return user;
+    }
+  } catch {}
+  return null;
+};
 
 /* ════════════════════════════════════════════════
    UI PRIMITIVES
@@ -154,6 +145,33 @@ const Input = ({ label, type = "text", value, onChange, placeholder, style = {} 
     />
   </div>
 );
+
+/* ════════════════════════════════════════════════
+   LEVEL ART (упрощён)
+════════════════════════════════════════════════ */
+function LevelArt({ demon, diff, size = 110 }) {
+  const m = DM[diff];
+  const acc = demon.accent || m.color;
+  const words = demon.name.split(" ");
+  const initials = words.length >= 2 ? words[0][0] + words[1][0] : demon.name.slice(0, 2);
+  return (
+    <div style={{ width: size, flexShrink: 0, position: "relative", overflow: "hidden", background: demon.color || "#0a0a15", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.3 }} viewBox={`0 0 ${size} 80`} preserveAspectRatio="xMidYMid slice">
+        <defs>
+          <radialGradient id={`rg-${demon.id}`} cx="50%" cy="50%" r="70%">
+            <stop offset="0%" stopColor={acc} stopOpacity="0.9" />
+            <stop offset="100%" stopColor={acc} stopOpacity="0" />
+          </radialGradient>
+        </defs>
+        <rect width={size} height="80" fill={`url(#rg-${demon.id})`} />
+        <circle cx="0" cy="0" r="35" fill={acc} fillOpacity="0.12" />
+      </svg>
+      <div style={{ position: "relative", zIndex: 1, fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 26, color: acc, textShadow: `0 0 18px ${acc}88`, userSelect: "none" }}>
+        {initials.toUpperCase()}
+      </div>
+    </div>
+  );
+}
 
 /* ════════════════════════════════════════════════
    AUTH PAGE
@@ -208,12 +226,11 @@ function AuthPage({ onAuth, db }) {
 }
 
 /* ════════════════════════════════════════════════
-   SUBMIT MODAL (с формой и созданием заявки)
+   SUBMIT MODAL (ТОЛЬКО Telegram username + процент)
 ════════════════════════════════════════════════ */
 function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
   const [tgUsername, setTgUsername] = useState("");
   const [percent, setPercent] = useState(50);
-  const [videoLink, setVideoLink] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -235,7 +252,7 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
       username: user.username,
       demonId: demon.id,
       percent: pct,
-      note: `Telegram: @${tgUsername.trim()} | Видео: ${videoLink.trim() || "не указано"}`,
+      note: `Telegram: @${tgUsername.trim()} | Прогресс: ${pct}%`,
       submittedAt: new Date().toISOString()
     };
     const newDb = {
@@ -249,14 +266,13 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
       onClose();
       setTgUsername("");
       setPercent(50);
-      setVideoLink("");
     }, 1500);
   };
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 500, background: "rgba(0,0,0,0.78)", backdropFilter: "blur(12px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
       <div onClick={e => e.stopPropagation()} style={{ background: "#1e2131", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 20, padding: "28px 26px 24px", maxWidth: 500, width: "100%", position: "relative", maxHeight: "90vh", overflowY: "auto" }}>
-        <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#8888aa", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        <button onClick={onClose} style={{ position: "absolute", top: 14, right: 14, background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "50%", width: 30, height: 30, cursor: "pointer", color: "#8888aa" }}>✕</button>
         
         <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 800, fontSize: 20, marginBottom: 4, color: "#eaeaf4" }}>Подача прогресса</div>
         <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 20 }}>Уровень: <span style={{ color: "#f87171" }}>{demon?.name || "не выбран"}</span></div>
@@ -270,8 +286,19 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
         ) : (
           <>
             <div style={{ background: "rgba(248,113,113,0.08)", border: "1px solid rgba(248,113,113,0.25)", borderRadius: 12, padding: "12px 14px", marginBottom: 16 }}>
-              <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 13, color: "#f87171", marginBottom: 2 }}>📌 Требования</div>
-              <div style={{ fontSize: 12, color: "#c8c8e0" }}>Только видео, полная попытка, видимый HUD. Укажите ваш Telegram username для связи.</div>
+              <div style={{ fontFamily: "'Syne',sans-serif", fontWeight: 700, fontSize: 13, color: "#f87171", marginBottom: 2 }}>📌 Как подать заявку</div>
+              <div style={{ fontSize: 12, color: "#c8c8e0" }}>
+                1. Снимите видео вашего прогресса<br/>
+                2. Отправьте видео в Telegram-группу<br/>
+                3. Укажите ваш Telegram username и процент ниже<br/>
+                4. Администратор проверит видео и одобрит заявку
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16, display: "flex", justifyContent: "center" }}>
+              <a href="https://t.me/+rxTdIyv5aeUzOTUy" target="_blank" rel="noopener noreferrer" style={{ background: "#229ED9", color: "#fff", padding: "10px 20px", borderRadius: 40, textDecoration: "none", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 8 }}>
+                📱 Перейти в Telegram-группу
+              </a>
             </div>
 
             <Input label="Telegram username" value={tgUsername} onChange={setTgUsername} placeholder="@username" />
@@ -281,8 +308,6 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
               <input type="range" min="1" max="100" value={percent} onChange={e => setPercent(e.target.value)} style={{ width: "100%", background: "#13151e", accentColor: "#f87171" }} />
               <div style={{ fontFamily: "monospace", fontSize: 14, marginTop: 4, color: "#fbbf24" }}>{percent}%</div>
             </div>
-
-            <Input label="Ссылка на видео (необязательно)" value={videoLink} onChange={setVideoLink} placeholder="https://youtu.be/..." />
 
             {error && <div style={{ fontSize: 12, color: "#f87171", marginBottom: 12, background: "rgba(248,113,113,0.08)", borderRadius: 8, padding: "8px 12px" }}>{error}</div>}
 
@@ -295,7 +320,7 @@ function SubmitModal({ open, onClose, user, demon, db, onUpdate }) {
 }
 
 /* ════════════════════════════════════════════════
-   DEMON CARD (с передачей onSubmit и id демона)
+   DEMON CARD
 ════════════════════════════════════════════════ */
 function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
   const [open, setOpen] = useState(false);
@@ -338,11 +363,12 @@ function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
       {open && (
         <div onClick={e => e.stopPropagation()} style={{ borderTop: "1px solid rgba(255,255,255,0.06)", background: "#13151e", padding: "14px 16px" }}>
           <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 12, lineHeight: 1.55 }}>
-            Прогресс подтверждается через видео. Заполните форму и отправьте заявку — её проверит администратор.
+            Прогресс подтверждается только через видео в Telegram-группе.<br />
+            После проверки администратором — баллы начислятся автоматически.
           </div>
           <Btn onClick={() => onSubmit(demon)} color="#229ED9" style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
-            Подать прогресс
+            Подать прогресс в Telegram
           </Btn>
         </div>
       )}
@@ -351,7 +377,7 @@ function DemonCard({ demon, diff, rank, user, approved, onSubmit }) {
 }
 
 /* ════════════════════════════════════════════════
-   LIST PAGE (передаем onSubmit как функцию, принимающую демона)
+   LIST PAGE
 ════════════════════════════════════════════════ */
 function ListPage({ user, approved, onSubmit }) {
   const keys = ["ext", "ins", "hard", "med"];
@@ -383,7 +409,7 @@ function ListPage({ user, approved, onSubmit }) {
 }
 
 /* ════════════════════════════════════════════════
-   MY PROFILE PAGE
+   PROFILE PAGE
 ════════════════════════════════════════════════ */
 function ProfilePage({ user, approved }) {
   const myRecs = approved.filter(a => a.username === user.username);
@@ -458,7 +484,7 @@ function ProfilePage({ user, approved }) {
       {myRecs.length === 0 && (
         <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: "40px 20px", textAlign: "center", color: "#6b6b88" }}>
           <div style={{ fontSize: 28, marginBottom: 10 }}>🎮</div>
-          <p style={{ fontSize: 13 }}>Подтверждённых прогрессов пока нет.<br />Отправьте заявку через форму на карточке уровня!</p>
+          <p style={{ fontSize: 13 }}>Подтверждённых прогрессов пока нет.<br />Отправьте видео в Telegram-группу!</p>
         </div>
       )}
     </div>
@@ -503,7 +529,7 @@ function LeaderboardPage({ db, approved }) {
 }
 
 /* ════════════════════════════════════════════════
-   ADMIN PANEL (с вкладкой заявок)
+   ADMIN PANEL
 ════════════════════════════════════════════════ */
 function AdminPanel({ db, onUpdate, currentUser }) {
   const [activeTab, setActiveTab] = useState("pending");
@@ -593,7 +619,6 @@ function AdminPanel({ db, onUpdate, currentUser }) {
         {adminTabs.map(t => <button key={t.k} onClick={() => setActiveTab(t.k)} style={tabStyle(t.k)}>{t.l}</button>)}
       </div>
 
-      {/* PENDING */}
       {activeTab === "pending" && (
         <div>
           {db.pending.length === 0 ? (
@@ -614,7 +639,7 @@ function AdminPanel({ db, onUpdate, currentUser }) {
                   <span style={{ fontFamily: "monospace", fontSize: 12, color: "#fbbf24" }}>{p.percent}%</span>
                   <span style={{ marginLeft: "auto", fontSize: 10, color: "#44445a" }}>{new Date(p.submittedAt).toLocaleString("ru")}</span>
                 </div>
-                {p.note && <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px", wordBreak: "break-all" }}>{p.note}</div>}
+                {p.note && <div style={{ fontSize: 12, color: "#8888aa", marginBottom: 10, background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px" }}>{p.note}</div>}
                 <div style={{ display: "flex", gap: 8 }}>
                   <Btn onClick={() => doApprove(p)} color="#4ade80" small>✓ Одобрить</Btn>
                   <Btn onClick={() => doReject(p)} color="#f87171" outline small>✗ Отклонить</Btn>
@@ -625,7 +650,6 @@ function AdminPanel({ db, onUpdate, currentUser }) {
         </div>
       )}
 
-      {/* MANUAL ADD */}
       {activeTab === "manual" && (
         <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "18px 16px" }}>
           <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 16 }}>Добавить подтверждённый прогресс вручную (без заявки)</div>
@@ -651,7 +675,6 @@ function AdminPanel({ db, onUpdate, currentUser }) {
         </div>
       )}
 
-      {/* USERS */}
       {activeTab === "users" && (
         <div>
           {db.users.map(u => {
@@ -675,7 +698,6 @@ function AdminPanel({ db, onUpdate, currentUser }) {
         </div>
       )}
 
-      {/* POINTS */}
       {activeTab === "points" && (
         <div style={{ background: "#181b27", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 14, padding: "18px 16px" }}>
           <div style={{ fontSize: 13, color: "#6b6b88", marginBottom: 16 }}>Вручную изменить баллы игрока</div>
@@ -715,20 +737,35 @@ export default function App() {
       const newDb = { ...db, users: [...db.users, user] };
       updateDb(newDb);
       setCurrentUser(user);
+      saveSession(user);
     } else {
       const fresh = db.users.find(u => u.username === user.username) || user;
       setCurrentUser(fresh);
+      saveSession(fresh);
     }
     setTab("list");
   };
 
-  const handleLogout = () => { setCurrentUser(null); setTab("list"); };
+  const handleLogout = () => {
+    setCurrentUser(null);
+    saveSession(null);
+    setTab("list");
+  };
 
   const openSubmitModal = (demon) => {
     setSelectedDemon(demon);
     setSubmitModal(true);
   };
 
+  // Восстановление сессии при загрузке
+  useEffect(() => {
+    const savedUser = loadSession(db);
+    if (savedUser) {
+      setCurrentUser(savedUser);
+    }
+  }, [db]);
+
+  // Обновляем currentUser если изменился db
   useEffect(() => {
     if (currentUser) {
       const fresh = db.users.find(u => u.username === currentUser.username);
@@ -747,10 +784,12 @@ export default function App() {
   ];
 
   return (
-    <div style={{ background: "#0f1117", minHeight: "100vh", color: "#eaeaf4", fontFamily: "'Outfit',sans-serif" }}>
+    <div style={{ background: "#0f1117", minHeight: "100vh", color: "#eaeaf4", fontFamily: "'Outfit',sans-serif", margin: 0, padding: 0 }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Outfit:wght@400;500;600&display=swap');
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; padding: 0; background: #0f1117; }
+        #root { margin: 0; padding: 0; width: 100%; min-height: 100vh; }
         input, select { -webkit-appearance: none; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #0f1117; }
